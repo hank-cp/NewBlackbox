@@ -43,6 +43,30 @@ public class AttributionSourceUtils {
             if (attributionSource == null) return;
             
             Class<?> attributionSourceClass = attributionSource.getClass();
+            int targetUid = getTargetUid();
+            
+            
+            try {
+                java.lang.reflect.Field stateField = attributionSourceClass.getDeclaredField("mAttributionSourceState");
+                stateField.setAccessible(true);
+                Object state = stateField.get(attributionSource);
+                if (state != null) {
+                    Class<?> stateClass = state.getClass();
+                    for (String fieldName : new String[]{"uid", "mUid"}) {
+                        try {
+                            java.lang.reflect.Field uidField = stateClass.getDeclaredField(fieldName);
+                            uidField.setAccessible(true);
+                            uidField.set(state, targetUid);
+                            Slog.d(TAG, "Fixed AttributionSource UID via state field: " + fieldName);
+                            return;
+                        } catch (NoSuchFieldException e) {
+                            
+                        }
+                    }
+                }
+            } catch (NoSuchFieldException e) {
+                
+            }
             
             
             String[] uidFieldNames = {"mUid", "uid", "mCallingUid", "callingUid", "mSourceUid", "sourceUid"};
@@ -51,7 +75,7 @@ public class AttributionSourceUtils {
                 try {
                     java.lang.reflect.Field uidField = attributionSourceClass.getDeclaredField(fieldName);
                     uidField.setAccessible(true);
-                    uidField.set(attributionSource, BlackBoxCore.getHostUid());
+                    uidField.set(attributionSource, targetUid);
                     Slog.d(TAG, "Fixed AttributionSource UID via field: " + fieldName);
                     break;
                 } catch (NoSuchFieldException e) {
@@ -63,7 +87,7 @@ public class AttributionSourceUtils {
             try {
                 java.lang.reflect.Method setUidMethod = attributionSourceClass.getDeclaredMethod("setUid", int.class);
                 setUidMethod.setAccessible(true);
-                setUidMethod.invoke(attributionSource, BlackBoxCore.getHostUid());
+                setUidMethod.invoke(attributionSource, targetUid);
                 Slog.d(TAG, "Fixed AttributionSource UID via setter method");
             } catch (Exception e) {
                 
@@ -87,6 +111,19 @@ public class AttributionSourceUtils {
         } catch (Exception e) {
             Slog.w(TAG, "Error fixing AttributionSource UID: " + e.getMessage());
         }
+    }
+
+    
+    private static int getTargetUid() {
+        try {
+            int callingUid = BlackBoxCore.getCallingBUid();
+            if (callingUid > 0 && callingUid < android.os.Process.LAST_APPLICATION_UID) {
+                return callingUid;
+            }
+        } catch (Exception e) {
+            Slog.w(TAG, "Failed to get calling UID: " + e.getMessage());
+        }
+        return BlackBoxCore.getHostUid();
     }
 
     

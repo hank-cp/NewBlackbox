@@ -4,11 +4,7 @@ import android.os.IInterface;
 
 import java.lang.reflect.Method;
 
-import black.android.content.BRAttributionSource;
-import top.niunaijun.blackbox.app.BActivityThread;
-import top.niunaijun.blackbox.BlackBoxCore;
 import top.niunaijun.blackbox.fake.hook.ClassInvocationStub;
-import top.niunaijun.blackbox.utils.compat.ContextCompat;
 import top.niunaijun.blackbox.utils.Slog;
 import android.os.Bundle;
 import top.niunaijun.blackbox.utils.AttributionSourceUtils;
@@ -197,54 +193,6 @@ public class ContentProviderStub extends ClassInvocationStub implements BContent
         
         
         return getSafeDefaultValue(methodName);
-    }
-
-    
-    private void fixAttributionSourceUid(Object attributionSource) {
-        try {
-            if (attributionSource == null) return;
-            
-            Class<?> attributionSourceClass = attributionSource.getClass();
-            
-            
-            try {
-                java.lang.reflect.Field uidField = attributionSourceClass.getDeclaredField("mUid");
-                uidField.setAccessible(true);
-                uidField.set(attributionSource, BlackBoxCore.getHostUid());
-                Slog.d(TAG, "Fixed AttributionSource UID via field access");
-            } catch (NoSuchFieldException e) {
-                
-                try {
-                    java.lang.reflect.Field uidField = attributionSourceClass.getDeclaredField("uid");
-                    uidField.setAccessible(true);
-                    uidField.set(attributionSource, BlackBoxCore.getHostUid());
-                    Slog.d(TAG, "Fixed AttributionSource UID via alternative field");
-                } catch (NoSuchFieldException e2) {
-                    
-                    try {
-                        java.lang.reflect.Method setUidMethod = attributionSourceClass.getDeclaredMethod("setUid", int.class);
-                        setUidMethod.setAccessible(true);
-                        setUidMethod.invoke(attributionSource, BlackBoxCore.getHostUid());
-                        Slog.d(TAG, "Fixed AttributionSource UID via setter method");
-                    } catch (Exception e3) {
-                        Slog.w(TAG, "Could not fix AttributionSource UID: " + e3.getMessage());
-                    }
-                }
-            }
-            
-            
-            try {
-                java.lang.reflect.Field packageField = attributionSourceClass.getDeclaredField("mPackageName");
-                packageField.setAccessible(true);
-                packageField.set(attributionSource, mAppPkg);
-                Slog.d(TAG, "Fixed AttributionSource package name");
-            } catch (Exception e) {
-                
-            }
-            
-        } catch (Exception e) {
-            Slog.w(TAG, "Error fixing AttributionSource UID: " + e.getMessage());
-        }
     }
 
     @Override

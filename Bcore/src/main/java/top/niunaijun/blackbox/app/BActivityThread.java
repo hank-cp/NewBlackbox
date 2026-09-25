@@ -1199,6 +1199,34 @@ public class BActivityThread extends IBActivityThread.Stub {
         for (AppLifecycleCallback appLifecycleCallback : BlackBoxCore.get().getAppLifecycleCallbacks()) {
             appLifecycleCallback.afterApplicationOnCreate(packageName, processName, application, BActivityThread.getUserId());
         }
+        
+        if (packageName != null && (packageName.contains("rimet") || packageName.contains("dingtalk"))) {
+            presetDingtalkContext(application);
+        }
+    }
+
+    
+    private void presetDingtalkContext(Application application) {
+        try {
+            ClassLoader classLoader = application.getClassLoader();
+            Class<?> x47Class = Class.forName("x47", false, classLoader);
+            Method gMethod = x47Class.getDeclaredMethod("g");
+            gMethod.setAccessible(true);
+            Object x47 = gMethod.invoke(null);
+            if (x47 == null) {
+                return;
+            }
+            Class<?> r61Class = Class.forName("r61", false, classLoader);
+            if (!r61Class.isInstance(application)) {
+                return;
+            }
+            Method kMethod = x47Class.getDeclaredMethod("k", r61Class);
+            kMethod.setAccessible(true);
+            kMethod.invoke(x47, application);
+            Slog.d(TAG, "Preset DingTalk context (x47) for: " + application.getPackageName());
+        } catch (Throwable e) {
+            Slog.w(TAG, "Failed to preset DingTalk context: " + e.getMessage());
+        }
     }
 
     

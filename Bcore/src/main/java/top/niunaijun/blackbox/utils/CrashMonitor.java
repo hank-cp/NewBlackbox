@@ -137,10 +137,23 @@ public class CrashMonitor {
     private static void installGlobalCrashHandlers() {
         try {
             
+            final Thread.UncaughtExceptionHandler originalHandler = Thread.getDefaultUncaughtExceptionHandler();
+            
             Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                 @Override
                 public void uncaughtException(Thread thread, Throwable throwable) {
-                    handleCrash("JavaException", thread, throwable);
+                    try {
+                        handleCrash("JavaException", thread, throwable);
+                    } catch (Exception e) {
+                        Slog.e(TAG, "Error handling crash: " + e.getMessage(), e);
+                    }
+                    
+                    if (originalHandler != null && originalHandler != this) {
+                        originalHandler.uncaughtException(thread, throwable);
+                    } else {
+                        android.os.Process.killProcess(android.os.Process.myPid());
+                        System.exit(10);
+                    }
                 }
             });
             
@@ -218,6 +231,9 @@ public class CrashMonitor {
     public static void handleCrash(String crashType, Thread thread, Throwable throwable) {
         try {
             sTotalCrashes.incrementAndGet();
+            
+            
+            Slog.e(TAG, "Uncaught exception on thread: " + (thread != null ? thread.getName() : "unknown"), throwable);
             
             
             if (crashType.equals("JavaException")) {
